@@ -1,0 +1,15 @@
+data<-read.csv("Credit2.csv")
+summary(data)
+plot(data$Balance~data$Rating, main="Credit Rating vs. Balance", ylab="Balance", xlab="Rating")
+plot(data$Balance~data$Limit, main="Credit Limit vs. Balance", ylab="Balance", xlab="Credit Limit")
+plot(data$Rating~data$Limit)
+plot(data)
+
+table( data$Ethnicity,data$Gender, data$Student, data$Married)
+
+hist(data$Income)
+hist(data$Limit)
+hist(data$Rating)
+hist(data$Cards)
+hist(data$Age)
+hist(data$Education)
