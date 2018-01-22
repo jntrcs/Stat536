@@ -13,3 +13,12 @@ hist(data$Rating)
 hist(data$Cards)
 hist(data$Age)
 hist(data$Education)
+
+require(ggplot2)
+pdf(file="limitRating.pdf")
+ggplot(data)+geom_point(aes(x=Rating, y=Limit))+
+  theme(axis.text.x=element_text(size=18, angle=0, vjust=0.3), axis.title.x = element_text(size=22),
+        axis.title.y=element_text(size=22),
+        axis.text.y=element_text(size=16),
+        plot.title=element_text(size=16))
+dev.off()
