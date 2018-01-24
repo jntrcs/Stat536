@@ -30,5 +30,18 @@ par(mfrow=c(1,1))
 avPlot(mod.inter, variable = "Income:StudentYes")
 
 
-plot(data$Balance~data$Income)
-abline(a=2000+531.92, b=-8.505 )
+resids<-rstudent(mod)
+plot(resids)
+qqnorm(resids)
+hist(resids)
+data$residual<-resids
+data[abs(data$residual)>2,]
+pnorm(-2)*2*294 #expected number of residuals greater than +-2
+data$leverage<-influence(mod)$hat
+plot(data$leverage~data$Limit)
+data$cooks<-cooks.distance(mod)
+plot(data$cooks~data$Income)
+mean(data$leverage)*2
+data$predictions<-fitted(mod)
+plot(data$residual~data$predictions)
+plot(mod)

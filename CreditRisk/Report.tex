@@ -15,9 +15,9 @@
 
 \section{Introduction}
 
-One of the ways credit card companies make money is by credit card users accruing interest on their monthly balance. However, users who run high balances frequently face bankruptcy, which results in a significant loss to the credit card company because they have to write off the balance. Therefore, the credit company's ideal customers carry a medium balance with low risk of bankruptcy. 
+One of the ways credit card companies make money is by credit card users accruing interest on their monthly balance. However, users who run high balances frequently face bankruptcy which results in a significant loss to the credit card company because they have to write off the balance. Therefore, the credit company's ideal customers carry a medium balance with low risk of bankruptcy. 
 
-Because of this, credit card companies are interested in being able to estimate the balance a customer will carry based off other information they have on the customer. This estimate could be used predictively in the credit card approval process (where customers are given cards only if they are likely to be a profitable customer) or descriptively, where the company uses what they learn about customers with medium balances to target advertising towards people with those same characteristics. Our analysis will address both these questions.
+Because of this, credit card companies are interested in being able to estimate the balance a customer will carry based off other information they have on the customer. This estimate could be used predictively in the credit card approval process (where customers are given cards only if they are likely to be a profitable customer) or descriptively (where the company uses what they learn about customers with medium balances to target advertising towards people with those same characteristics). Our analysis will address both these questions.
 
 The dataset we have been given contains the monthly balance of customers, along with ten explanatory variables. We will learn about the explanatory variables by performing multiple linear regression with balance as our response variable. This will allow us to obtain estimates for the effects of the explanatory variables, predictions for future observations, and uncertainty estimates for both.
 
@@ -29,7 +29,8 @@ We'll start by exploring the data we have been given and make sure that it meets
 \caption{Credit limit and rating are highly collinear. }
 \label{lr}
 \end{figure}
-One concern in that data is shown in Figure \ref{lr}. Credit rating and credit limit are highly correlated, so much so that it is reasonable to infer that credit limits are assigned based solely off rating. It is likely unnecessary to include both variables in our model since they contain the same information, and unwise because they will cause instability in our parameter estimation.
+
+One concern in our data is shown in Figure \ref{lr}. Credit rating and credit limit are highly correlated, so much so that it is reasonable to infer that credit limits are assigned based solely off rating. It is likely unnecessary to include both variables in our model since they contain the same information, and unwise because they will cause instability in our parameter estimation.
 
 
 \begin{figure}
@@ -41,8 +42,9 @@ One concern in that data is shown in Figure \ref{lr}. Credit rating and credit l
 
 The added-variable plots in Figure \ref{av} help validate our model assumptions as well as show which variables have the strongest relationship with monthly balance. The plots were created using all variables except credit limit in order to capture the true effect of credit rating. All the plots show that the linearity assumption for the relationship between the explanatory variable and the response is well justified. In addition, we don't see strong evidence of heteroskedastic data (data in which the variance is different based on the magnitude of x).  
 \section{Model Selection}
-something about AIC best subset selection
-And how we looked at the interaction and decided it wasn't significant
+In order to get the best confidence intervals on our effect sizes, we wanted to eliminate any spurious variables that did not inform us about our response variable. In order to see which variables did not contribute to a predictive model, we ran a AIC variable selection algorithm. Because we only have ten explanatory variables, we performed an exhaustive search for the best subset selection. 
+
+That algorithm left us with five of our ten variables: income, limit, number of credit cards, age, and student status. A reasonable hypothesis would be that there is an interaction between income and student status. This would mean the slope for the effect of income is different if the person is a student. We can add this model and look at the size of the estimated effect as well as its effect on AIC. Doing this we find that our AIC goes up by almost two and the slope difference is almost 0 (0.14 with a standard error of 0.98). Therefore we will proceed without the interaction.
 
 Our final model can be written as:
 
@@ -53,28 +55,20 @@ $$\epsilon \sim N(0, \sigma^2)
 $$          
 
 Where $\beta_0$ is our intercept, the other $\beta$s are the effects for the explanatory variables, and $\epsilon$ are the residual errors.
-
-\begin{table}
+\begin{figure}
 \centering
-\begin{tabular}{|lrr|r|}
-  \hline
- & DC & Marvel & Proportion \\ 
-  \hline
-Warner Brothers &  18 &   0 & 0.28\\ 
-  Buena Vista &   0 &  10 & 0.16\\ 
-  Fox &   0 &  14 &0.22\\ 
-  Lionsgate &   1 &   2&0.05 \\ 
-  New Line &   0 &   3 &0.05\\ 
-  Paramount &   0 &   4& 0.06 \\ 
-  Sony &   2 &   7 &0.14\\ 
-  Universal &   0 &   3  & 0.05\\ 
-   \hline
-   Proportion & 0.33 & 0.67 &1\\
-   \hline
-\end{tabular}
-\caption{Counts for studio and franchise for movies in dataset}
-\label{combotab}
-\end{table}
+\includegraphics[scale=.3]{resids.pdf}
+\caption{Errors are normally distributed}
+\label{resid}
+\end{figure}
 
+Before we create predictions and confidence intervals, we can check that our assumptions are met by examining the model. Figure \ref{resid} shows standardized errors from our predictions. Our normal assumptions seems to fit the data quite well. Figure \ref{fitted} helps verify that we have homoskedastic data for all observations.  
+
+\begin{figure}
+\centering
+\includegraphics[scale=.3]{fitted.pdf}
+\caption{Residuals don't show any distinct patterns}
+\label{fitted}
+\end{figure}
 
 \end{document}
