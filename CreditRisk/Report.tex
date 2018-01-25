@@ -35,7 +35,7 @@ One concern in our data is shown in Figure \ref{lr}. Credit rating and credit li
 
 \begin{figure}
 \centering
-\includegraphics[scale=.5]{AVplot.pdf}
+\includegraphics[scale=.5]{AVPlot.pdf}
 \caption{Added variable plots for all quantitative variables. }
 \label{av}
 \end{figure}
@@ -70,5 +70,60 @@ Before we create predictions and confidence intervals, we can check that our ass
 \caption{Residuals don't show any distinct patterns}
 \label{fitted}
 \end{figure}
+
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Estimate & 95\% LowerBound & 95\% UpperBound \\ 
+  \hline
+(Intercept) & -527.73 & -666.55 & -388.91 \\ 
+  Income & -8.55 & -9.90 & -7.20 \\ 
+  Limit & 0.30 & 0.28 & 0.33 \\ 
+  Cards & 18.14 & -0.87 & 37.16 \\ 
+  Age & -2.59 & -4.25 & -0.94 \\ 
+  StudentYes & 511.57 & 427.10 & 596.03 \\ 
+   \hline
+\end{tabular}
+\caption{Model Coefficient Estimates} 
+\label{coefs}
+\end{table}
+
+Table \ref{coefs} shows the estimated coefficients for our Least Squares Regression Model. The interpretation of each follows. We are 95\% confident that a card candidate with an income of 0, credit limit of 0, 0 other credit cards, an age of 0, and who is not a student would have credit balance between \$-666.55 and \$-388.91. We are 95\% confident that as a person's income increases by one hundred dollars, their credit card balance decreases by \$9.90 and \$7.20 on average.  We are 95\% confident that as a person's credit limit increases by one, their credit card balance increases by \$0.28 and \$0.33 on average.  We are 95\% confident that as the number other credit cards a candidate holds increases by one, their credit card balance increases by \$-0.87 and \$37.16 on average. We are 95\% confident that as the age of a candidate increases by one, their credit card balance decreases by \$4.25 and \$0.94 on average. We are 95\% confident that a candidate who is a student, has higher credit card balance than non-students by about \$427.10 and \$596.03 on average.
+
+\section{Model Accuracy}
+After fitting our model we tested the resulting model's fit through k-fold cross validation with a k of 5. We randomized the data, split into 5 folds and sequentially used each fold as a hold out set to test accuracy while we fitted the model to the other 4 folds. Our average accuracy results are included in table \ref{acc}.
+
+\vspace{10 pt}
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+  Bias &  0.33 \\ 
+  RPMSE & \$213.24 \\ 
+  Coverage & 94.56\% \\ 
+   \hline
+\end{tabular}
+\caption{Model Accuracy} 
+\label{acc}
+\end{table}
+\vspace{7 pt}
+
+Our bias of .33 indicates that on average our credit card balance predictions were higher than the actual amounts. Our Root Predictive Mean Square Error (RPMSE) of \$213.24 indicates that our predictions were off by \$213.24 on average. Raw error values by themselves don't hold much information on model performance unless compared with other models. But the standard deviation of credit card balance in the dataset was \$450.12, so our predictions were on average less than half a standard deviation from the actual values. A metric that does hold a lot of information in model performance is that of prediction interval coverage. Our prediction interval coverage as shown in Table \ref{acc} was 94.56\%. This shows us first that our model assumptions were met very well, and second that the our model was a very good fit and was able to capture 95\% of the actual credit card balances within calculated prediction intervals.
+
+According to the results of our cross validation, it would seem that our multiple linear model would be able to perform well predicting credit card balances for candidates. The model could be used to predict whether or not credit card candidate should receive a card. Credit card companies would first have to establish a threshold where below a certain predicted balance no candidates would qualify for a card. But once a threshold is found, the model would be easy and accurate to use for credit card companies.
+
+\section{Conclusion}
+In this analysis we were able to show how our multiple linear regression model met the necessary assumptions for the data given and could be used for predicting credit card balance for potential credit card customers. Our model was simple and only used a few features from the original data, but proved powerful and effective. A credit card company could use the model to protect itself against bad debt from high risk customers and the company would also be able to explain why a candidate might not qualify for a card thanks to the very high interpretability of the model.
+
+A shortcoming in this analysis is...*** a shortcoming ****. The next step in this analysis would be to gather data so as to build a model that is more robust in its prediction of unseen data. There could be a possibility that our model has too much uncertainty and that the credit card company would more precise predictions. Gathering more data would allow for more precise predictions by reducing the prediction variance of the model while also keeping the interpretability of the model. 
+
+
+
+
+
+
+
 
 \end{document}
