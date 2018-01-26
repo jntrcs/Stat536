@@ -1,4 +1,7 @@
 ##Model Fitting
+
+data<-read.csv("Credit2.csv")
+
 require(car)
 mod<-lm(Balance~.-Limit, data=data)
 avPlot(mod, variable = c("Income"))
@@ -62,3 +65,4 @@ ggplot(data)+geom_point(aes(y=residual, x=fitted))+ylab("Standardized Residuals"
         axis.text.y=element_text(size=16),
         plot.title=element_text(size=16))
 dev.off()
+
