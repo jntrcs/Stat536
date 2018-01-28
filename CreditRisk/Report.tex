@@ -44,7 +44,16 @@ The added-variable plots in Figure \ref{av} help validate our model assumptions 
 \section{Model Selection}
 In order to get the best confidence intervals on our effect sizes, we wanted to eliminate any spurious variables that did not inform us about our response variable. In order to see which variables did not contribute to a predictive model, we ran a AIC variable selection algorithm. Because we only have ten explanatory variables, we performed an exhaustive search for the best subset selection. 
 
-That algorithm left us with five of our ten variables: income, limit, number of credit cards, age, and student status. A reasonable hypothesis would be that there is an interaction between income and student status. This would mean the slope for the effect of income is different if the person is a student. We can add this model and look at the size of the estimated effect as well as its effect on AIC. Doing this we find that our AIC goes up by almost two and the slope difference is almost 0 (0.14 with a standard error of 0.98). Therefore we will proceed without the interaction.
+That algorithm left us with five of our ten variables: income, limit, number of credit cards, age, and student status. A reasonable hypothesis would be that there is an interaction between income and student status. This would mean the slope for the effect of income is different if the person is a student. 
+
+\begin{figure}
+\centering
+\includegraphics[scale=.7]{interaction.JPG}
+\caption{Interaction Plot}
+\label{interaction}
+\end{figure}
+
+Looking at the interaction plot in Figure \ref{interaction} we can see that the effect of Income on Balance is effected by the Student variable. However the lines never cross within the relevant domain of the data so the interaction does not seem very serious. However, we will test the interaction by using a more precise method. We can add this model and look at the size of the estimated effect as well as its effect on AIC. Doing this we find that our AIC goes up by almost two and the slope difference is almost 0 (0.14 with a standard error of 0.98). Therefore we will proceed without the interaction.
 
 Our final model can be written as:
 
