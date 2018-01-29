@@ -11,25 +11,31 @@
 \title{Credit Balance MLR}
 
 
+
 \author{Greg Sadler and Jackson Curtis}
 \maketitle 
+
+\begin{abstract}
+This project creates a linear model to estimate the effects of different variables on credit card balance. Best subset selection is used to choose important explanatory variables. Confidence and prediction intervals are provided, and k-fold cross-validation is used to validate the predictive accuracy of the model.
+\end{abstract}
 
 \section{Introduction}
 
 One of the ways credit card companies make money is by credit card users accruing interest on their monthly balance. However, users who run high balances frequently face bankruptcy which results in a significant loss to the credit card company because they have to write off the balance. Therefore, the credit company's ideal customers carry a medium balance with low risk of bankruptcy. 
 
-Because of this, credit card companies are interested in being able to estimate the balance a customer will carry based off other information they have on the customer. This estimate could be used predictively in the credit card approval process (where customers are given cards only if they are likely to be a profitable customer) or descriptively (where the company uses what they learn about customers with medium balances to target advertising towards people with those same characteristics). Our analysis will address both these questions.
+Because of this, credit card companies are interested in being able to estimate the balance a customer will carry based on other information they have on the customer. This estimate could be used predictively in the credit card approval process (where customers are given cards only if they are likely to be a profitable customer) or descriptively (where the company uses what they learn about customers with medium balances to target advertising towards people with those same characteristics). Our analysis will address both these questions.
 
 The dataset we have been given contains the monthly balance of customers, along with ten explanatory variables. We will learn about the explanatory variables by performing multiple linear regression with balance as our response variable. This will allow us to obtain estimates for the effects of the explanatory variables, predictions for future observations, and uncertainty estimates for both.
 
 \section{Data Exploration}
-We'll start by exploring the data we have been given and make sure that it meets the assumptions of multiple linear regression. The data set consists of 294 individuals with 11 observed variables and no missing data. Four variables (gender, ethnicity, marital status, and student status) are categorical while the rest are quantitative.
 \begin{figure}
 \centering
 \includegraphics[scale=.3]{limitRating.pdf}
 \caption{Credit limit and rating are highly collinear. }
 \label{lr}
 \end{figure}
+
+We'll start by exploring the data we have been given and make sure that it meets the assumptions of multiple linear regression. The data set consists of 294 individuals with 11 observed variables and no missing data. Four variables (gender, ethnicity, marital status, and student status) are categorical while the rest are quantitative.
 
 One concern in our data is shown in Figure \ref{lr}. Credit rating and credit limit are highly correlated, so much so that it is reasonable to infer that credit limits are assigned based solely off rating. It is likely unnecessary to include both variables in our model since they contain the same information, and unwise because they will cause instability in our parameter estimation.
 
@@ -45,7 +51,7 @@ The added-variable plots in Figure \ref{av} help validate our model assumptions 
 \section{Model Selection}
 In order to get the best confidence intervals on our effect sizes, we wanted to eliminate any spurious variables that did not inform us about our response variable. In order to see which variables did not contribute to a predictive model, we ran a AIC variable selection algorithm. Because we only have ten explanatory variables, we performed an exhaustive search for the best subset selection. 
 
-That algorithm left us with five of our ten variables: income, limit, number of credit cards, age, and student status. A reasonable hypothesis would be that there is an interaction between income and student status. This would imply the slope for the effect of income is different if the person is a student. 
+The algorithm left us with five of our ten variables: income, limit, number of credit cards, age, and student status. A reasonable hypothesis would be that there is an interaction between income and student status. This would imply the slope for the effect of income is different if the person is a student. 
 
 \begin{figure}
 \centering
@@ -54,7 +60,7 @@ That algorithm left us with five of our ten variables: income, limit, number of 
 \label{interaction}
 \end{figure}
 
-Looking at the interaction plot in Figure \ref{interaction} we can see that the effect of Income on Balance is effected by the Student variable. However the lines never cross within the relevant domain of the data so the interaction does not seem very serious. However, we will test the interaction by using a more precise method. We can add this model and look at the size of the estimated effect as well as its effect on AIC. Doing this we find that our AIC goes up by almost two and the slope difference is almost 0 (0.14 with a standard error of 0.98). Therefore we will proceed without the interaction.
+A visual inspection of Figure \ref{interaction} shows that the interaction is very faint. In order to see if it is worth keeping, we built a model with it included and looked at the size of the estimated interaction effect and the new model's AIC. Doing this we found that the new AIC is almost 2 points higher and the slope difference is almost 0 (0.14 with a standard error of 0.98). Therefore we will proceed without the interaction.
 
 Our final model can be written as:
 
@@ -64,7 +70,7 @@ Balance = \beta_0+ \beta_1 * Income + \beta_2 * Limit + \beta_3 * Cards + \beta_
 $$\epsilon \sim N(0, \sigma^2)
 $$          
 
-Where $\beta_0$ is our intercept, the other $\beta$s are the effects for the explanatory variables, and $\epsilon$ are the residual errors.
+Where $\beta_0$ is our intercept, the other $\beta$s are the effects for the explanatory variables, and $\epsilon$ is the residual error.
 \begin{figure}
 \centering
 \includegraphics[scale=.3]{resids.pdf}
@@ -100,7 +106,7 @@ Intercept & -527.73 & -666.55 & -388.91 \\
 \label{coefs}
 \end{table}
 
-Table \ref{coefs} shows the estimated coefficients for our linear regression model. The interpretation of each follows. We are 95\% confident that a card candidate with an income of 0, credit limit of 0, 0 other credit cards, an age of 0, and who is not a student would have credit balance between \$-666.55 and \$-388.91. We are 95\% confident that as a person's income increases by one hundred dollars, their credit card balance decreases by \$9.90 and \$7.20 on average.  We are 95\% confident that as a person's credit limit increases by one, their credit card balance increases by \$0.28 and \$0.33 on average.  We are 95\% confident that as the number other credit cards a candidate holds increases by one, their credit card balance increases by \$-0.87 and \$37.16 on average. We are 95\% confident that as the age of a candidate increases by one, their credit card balance decreases by \$4.25 and \$0.94 on average. We are 95\% confident that a candidate who is a student, has higher credit card balance than non-students by about \$427.10 and \$596.03 on average.
+Table \ref{coefs} shows the estimated coefficients for our linear regression model. The interpretation of each follows. The point estimate for our intercept is \$-527.73 We are 95\% confident that as a person's income increases by one hundred dollars, their credit card balance decreases between \$9.90 and \$7.20 on average.  We are 95\% confident that as a person's credit limit increases by one, their credit card balance increases between \$0.28 and \$0.33 on average.  We are 95\% confident that as the number other credit cards a candidate holds increases by one, their credit card balance increases between \$-0.87 and \$37.16 on average. We are 95\% confident that as the age of a candidate increases by one, their credit card balance decreases between \$4.25 and \$0.94 on average. We are 95\% confident that a candidate who is a student will have a credit card balance between \$427.10 and \$596.03 higher than a non-student.
 
 \section{Model Accuracy}
 After fitting our model we tested the resulting model's fit through k-fold cross validation with a k of 5. We randomized the data, split into 5 folds and sequentially used each fold as a hold out set to test accuracy while we fitted the model to the other 4 folds. Our average accuracy results are included in table \ref{acc}.
@@ -122,7 +128,7 @@ After fitting our model we tested the resulting model's fit through k-fold cross
 
 Our bias of 0.33 indicates that on average our credit card balance predictions were just 33 cents higher than the actual amounts. Our Root Predictive Mean Square Error (RPMSE) of \$213.24 indicates that our predictions were off by \$213.24 on average. Raw error values by themselves don't hold much information on model performance unless compared with other models. But the standard deviation of credit card balance in the dataset was \$450.12, so our predictions were on average less than half a standard deviation from the actual values. A metric that does hold a lot of information in model performance is that of prediction interval coverage. Our prediction interval coverage as shown in Table \ref{acc} was 94.56\%. This shows us first that our model assumptions were met very well, and second that the our model was a very good fit and was able to capture 95\% of the actual credit card balances within calculated prediction intervals.
 
-According to the results of our cross validation, it would seem that our regression model would be able to perform well predicting credit card balances for candidates. The model could be used to predict whether or not credit card candidate should receive a card. Credit card companies would first have to establish a threshold where below a certain predicted balance no candidates would qualify for a card. But once a threshold is found, the model would be easy and accurate to use for credit card companies.
+According to the results of our cross validation, it would seem that our regression model would be able to perform well predicting credit card balances for candidates. The model could be used to predict whether or not credit card candidate should receive a card. Credit card companies would first have to establish a threshold where below a certain predicted balance no candidates would qualify for a card. Once a threshold is found, the model would be easy and accurate to use for credit card companies.
 
 \section{Conclusion}
 In this analysis we were able to show how our multiple linear regression model met the necessary assumptions for the data given and could be used for predicting credit card balance for potential credit card customers. Our model was simple and only used a few features from the original data, but proved powerful and effective. A credit card company could use the model to protect itself against bad debt from high risk customers and the company would also be able to explain why a candidate might not qualify for a card thanks to the very high interpretability of the model.
@@ -131,8 +137,8 @@ A shortcoming of our regression approach could be its exploration of interaction
 
 
 
-
-
+\subsection*{Teamwork}
+Greg wrote the AIC selection code and the cross-fold validation. He also interpreted the model effects, ran the cross-validation, and made the interaction plot. Jackson did the exploratory data analysis, checked model assumptions, and created most of the graphics.
 
 
 

@@ -51,7 +51,7 @@ plot(mod)
 
 require(ggplot2)
 pdf(file="resids.pdf")
-ggplot(data)+geom_histogram(aes(x=residual), binwidth = .4)+xlab("Residuals")+ylab("Count")+
+ggplot(data)+geom_histogram(aes(x=residual), binwidth = .4)+xlab("Standardized Residuals")+ylab("Count")+
   theme(axis.text.x=element_text(size=18, angle=0, vjust=0.3), axis.title.x = element_text(size=22),
         axis.title.y=element_text(size=22),
         axis.text.y=element_text(size=16),
