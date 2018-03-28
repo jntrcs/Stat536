@@ -1,0 +1,156 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+ My code turned into a twisted mess, so I organized the notebook to reproduce the results of my analysis. If you want to dig into why I made the choices I did you'll have to dig into the mess of R files.
+ 
+Read in and clean-up the data:
+```{r}
+ozone<-read.csv("Ozone.csv")
+ozone$Date<-NULL
+names(ozone)<-c("Longitude", "Latitude", "Ozone")
+cmaq<-read.csv("CMAQ.csv")
+cmaq$Date<-NULL
+names(cmaq)<-c( "Longitude", "Latitude", "OzonePred")
+locs<-read.csv("PredLocs.csv")
+
+```
+
+Match up locations to nearest cmaq predictions:
+
+```{r}
+require(rgeos)
+ozonePoints <- sp::SpatialPoints(data.frame(ozone$Latitude, ozone$Longitude))
+CMAQPoints <- sp::SpatialPoints(data.frame(cmaq$Latitude, cmaq$Longitude))
+LOCPoints<-sp::SpatialPoints(data.frame(locs$Latitude, locs$Longitude))
+
+mins<-function(data){
+  order(data)[1:100]
+}
+
+hundredClosestCmaqRows.ozone <- apply(gDistance(ozonePoints, CMAQPoints, byid=TRUE), 2, mins)
+hundredClosestCmaqRows.locs<- apply(gDistance(LOCPoints, CMAQPoints, byid=TRUE), 2, mins)
+cmaqScores<-matrix(cmaq$OzonePred[hundredClosestCmaqRows.ozone], byrow = T, nrow=800)
+cmaqScoresLoc<-matrix(cmaq$OzonePred[hundredClosestCmaqRows.locs], byrow = T, nrow=nrow(locs))
+ozone$cmaqPreds<-cmaqScores
+locs$cmaqPreds<-cmaqScoresLoc
+ozone$nearestInCmaq<-cmaqScores[,1]
+
+```
+Save All data for faster loading next time
+```{r}
+save(cmaq, CMAQPoints, hundredClosestCmaqRows.ozone, hundredClosestCmaqRows.locs, LOCPoints, locs, ozone, ozonePoints, mins, file="CleanData.RData")
+```
+
+Load the data instead of processing (start here):
+```{r}
+load("CleanData.RData")
+```
+
+
+Center and scale x matrix before performing PCA
+```{r}
+for (i in 1:100){
+  scaling.mean<-mean(ozone$cmaqPreds[,i])
+  scaling.sd<-sd(ozone$cmaqPreds[,i])
+  ozone$cmaqPreds[,i]<-(ozone$cmaqPreds[,i]-scaling.mean)/scaling.sd
+  locs$cmaqPreds[,i]<-(locs$cmaqPreds[,i]-scaling.mean)/scaling.sd
+}
+```
+
+Compute the principal components of the model
+```{r}
+psi<- eigen(cov(ozone$cmaqPreds))$vectors[,1:8]
+ozone$PCs=ozone$cmaqPreds%*%psi
+locs$PCs<-locs$cmaqPreds%*%psi
+
+```
+
+Fit the model using the principal components
+```{r}
+require(nlme)
+model<-gls(Ozone~PCs, correlation = corExp(form=~Latitude+Longitude, nugget = T), data=ozone, method="ML")
+
+```
+
+Extract quantities of interest from model
+
+```{r}
+require(LatticeKrig)
+
+sigma2<-model$sigma^2
+dist.matrix<-rdist(cbind(ozone$Latitude, ozone$Longitude))
+nugget <- coef(model$modelStruct$corStruct,uncons = FALSE, allCoef = TRUE)[2]
+range<-coef(model$modelStruct$corStruct,uncons = FALSE, allCoef = TRUE)[1]
+R<-sigma2*(((1-nugget)*exp(-dist.matrix/range))+nugget*diag(nrow(ozone)))
+```
+
+Compute predictions and residuals from model
+```{r}
+N=800
+K<-800
+Xstar<-model.matrix(~PCs, data=ozone)
+bhat<-coef(model)
+Y<-ozone$Ozone
+X<-Xstar
+expanded.dist<-rdist(cbind(c(ozone$Latitude, ozone$Latitude), c(ozone$Longitude, ozone$Longitude)))
+expanded.R=exp(-expanded.dist/range)
+expanded.R<-(1-nugget)*expanded.R+nugget*diag(nrow(expanded.R))
+pred.mn<-Xstar%*%bhat + expanded.R[N+(1:K), (1:N)]%*%solve(expanded.R[(1:N),(1:N)])%*%
+  (Y-X%*%bhat)
+
+ozone$Prediction<-pred.mn
+ozone$Residual<-Y-pred.mn
+```
+
+Get Predictions and Prediction variances for unmeasured locations
+```{r}
+N=800
+K<-2685
+Xstar<-model.matrix(~PCs, data=locs)
+bhat<-coef(model)
+Y<-ozone$Ozone
+Xmatrix<-model.matrix(~PCs, data=ozone)
+expanded.dist<-rdist(cbind(c(ozone$Latitude, locs$Latitude), c(ozone$Longitude, locs$Longitude)))
+expanded.R=exp(-expanded.dist/range)
+expanded.R<-(1-nugget)*expanded.R+nugget*diag(nrow(expanded.R))
+pred.mn<-Xstar%*%bhat + expanded.R[N+(1:K), (1:N)]%*%solve(expanded.R[(1:N),(1:N)])%*%
+  (Y-Xmatrix%*%bhat)
+pred.var<-diag(sigma2*(expanded.R[N+(1:K),N+(1:K)]-expanded.R[N+(1:K),
+                                     (1:N)]%*%solve(expanded.R[(1:N),(1:N)])%*%expanded.R[(1:N),N+(1:K)]))
+locs$Prediction<-pred.mn
+locs$PredictionVariance<-pred.var
+```
+
+Backtransform coefficients to be on original components
+```{r}
+Z.red<-ozone$PCs
+theta.hats<-coef(model)[-1]
+beta.hats<-psi%*%theta.hats
+var.betas<-diag(psi%*%solve(t(Z.red)%*%solve(R,Z.red), t(psi)))
+lowers<-beta.hats-qnorm(.975)*sqrt(var.betas)
+uppers<-beta.hats+qnorm(.975)*sqrt(var.betas)
+significant<-lowers>0|uppers<0
+
+#require(xtable)
+#xtable(data.frame(beta.hats[1:10], CI=ints[1:10]))
+
+```
+
+Uncorrelate model to check assumptions and calculate R^2
+```{r}
+L<-t(chol(R))
+X<-model.matrix(~PCs, data=ozone)
+ystar<-solve(L,ozone$Ozone)
+xstar<-solve(L, X)
+uncor.mod<-lm(ystar~-1+xstar)
+
+```
+
+```{r}
+basic.mod<-gls(Ozone~1, correlation = corExp(form=~Latitude+Longitude, nugget = T), data=ozone, method="ML")
+anova(model,basic.mod)
+summary(basic.mod)
+```
+
