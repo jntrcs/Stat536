@@ -1,0 +1,105 @@
+---
+title: "Car Crash Analysis"
+output: html_notebook
+---
+
+Clean the data
+
+```{r}
+cars <- read.table("https://mheaton.byu.edu/Courses/Stat536/Case%20Studies/CarCrashes/Data/Crash.txt", header = TRUE)
+cars$cosHour<-cos(cars$HOUR*2*pi/24)
+cars$sinHour<-sin(cars$HOUR*2*pi/24)
+
+##### cleaning and combining data #####
+## intersection combind 3-10 as other intersections 
+cars$TYP_INT[cars$TYP_INT>=3]<-3
+
+## rest-use partial (1,2),  full, not_applicable/unknown (0,8)
+cars$REST_USE<-ifelse(cars$REST_USE %in% c(1,2), 1, ifelse(cars$REST_USE %in% c(0,8), 2, 3))
+
+## air_bag deployed (the rest), not deployed (20), not applicable (0)
+cars$AIR_BAG<-ifelse(cars$AIR_BAG ==20, 1, ifelse(cars$AIR_BAG==0, 2, 3))
+
+## leave VTRAFWAY
+
+## VNUM_LAN numeric
+
+## Weather clear(1), rain (2), snow (4), cloudy (10), everything else
+cars$WEATHER<-ifelse(cars$WEATHER==1, 1, ifelse(cars$WEATHER==2, 2, ifelse(cars$WEATHER==4, 3,
+                                                                           ifelse(cars$WEATHER==10, 4,5))))
+
+## keep VSPD_LIM as numeric
+
+## VALIGN 
+cars$VALIGN<-ifelse(cars$VALIGN==1,1,0) #this lowers BIC from 11268 to 11257
+
+## VSURCOND (5-11) other, keep rest
+cars$VSURCOND[cars$VSURCOND>=5]<-5
+
+## leave LGT_COND
+
+cars[,c(3:8, 10,  13, 14)]<-apply(cars[,c(3:8, 10, 13,14)], 2, as.character)
+names(cars)<-tolower(names(cars))
+
+```
+
+
+Check monotinicity of several continuous variables:
+```{r}
+pdf(file="HourMono.pdf")
+scatter.smooth(cars$hour, cars$severity, xlab="Hour", ylab="Severity")
+dev.off()
+pdf(file="LimitMono.pdf")
+scatter.smooth(cars$vspd_lim, cars$severity, xlab="Speed Limit", ylab="Severity")
+dev.off()
+
+```
+
+
+Find the best model using BIC as our criteria
+
+```{r}
+require(splines)
+full.mod<-glm(severity~coshour+sinhour+lgt_cond+weather+alcohol+typ_int+rest_use+air_bag+vtrafway+vnum_lan+vspd_lim+
+                valign+vsurcond,
+              data=cars, family = "binomial")
+
+bestBIC<-step(full.mod, scope=list(lower=severity~sinhour+coshour), direction="both",
+     k=log(nrow(cars)), trace=0)
+```
+
+Create a graphic demonstrating effect of time on odds of being severe
+```{r}
+sinhours<-sin(2*pi*1:24/24)
+coshours<-cos(2*pi*1:24/24)
+B1<-bestBIC$coefficients[3]
+B2<-bestBIC$coefficients[2]
+hours<-1:24
+pdf(file="TimeEffect.pdf")
+plot(exp(B1*sinhours+B2*coshours)~hours, type="l", xlab="Time", ylab="Odds Ratio")
+dev.off()
+```
+
+Make table of results to report
+```{r}
+require(xtable)
+summ<-summary(bestBIC)
+upper<-summ$coef[,1]+qnorm(.975)*summ$coef[,2]
+lower<-summ$coef[,1]-qnorm(.975)*summ$coef[,2]
+toPrint<-data.frame(Beta = summ$coef[,1], SE=summ$coef[,2], interval=paste0("(", round(lower,3),", ", round(upper,3),")") )
+xtable(toPrint, digits=2)
+```
+
+
+Make plot to show that our transformation worked:
+```{r}
+pdf(file="CosHour.pdf")
+scatter.smooth(cars$coshour, cars$severity, xlab="Cosine", ylab="Severity")
+dev.off()
+pdf(file="SinHour.pdf")
+scatter.smooth(cars$sinhour, cars$severity, xlab="Sine", ylab=NA)
+dev.off()
+```
+
+
+
