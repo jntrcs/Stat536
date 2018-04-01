@@ -12,3 +12,9 @@ Dimension Reduction--Genes
 Non-Linear Regression--Irrigation
 
 Correlated data (Time Series)--Solar
+
+Correlated Data (Spatial)--Ozone
+
+Logistic Regression--Car Crash
+
+Classification--Letters
