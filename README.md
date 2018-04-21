@@ -18,3 +18,5 @@ Correlated Data (Spatial)--Ozone
 Logistic Regression--Car Crash
 
 Classification--Letters
+
+Logistic Regression/Splines/Experimental Analysis--Tulips
