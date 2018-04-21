@@ -1,0 +1,160 @@
+---
+title: "Tulip Analysis"
+output: html_notebook
+---
+
+Read in and clean the data
+```{r}
+data<-read.csv("Tulips.csv")
+data$Population<-as.factor(data$Population)
+```
+
+
+Create a graphic demonstrating probability of germination
+```{r}
+pdf(file="GermBySpec.pdf")
+ggplot(data)+geom_histogram(aes(x=ChillingTime, fill=Germinated), bins=7)+facet_wrap(~Population)+
+  ggtitle("Germination Rate by Species")
+dev.off()
+```
+Create a graphic demonstrating effect of when data was collected:
+
+```{r}
+pdf(file="DayCollected.pdf")
+plot(data$Germinated~data$DayCollected, xlab="Day Collected", ylab="Germinated", main="Each species was collected on a different day of the year")
+dev.off()
+```
+
+
+Remove species 12 since it did not ever germinate
+```{r}
+data<-data[data$Population!=12,]
+require(splines)
+mod<-glm(Germinated~-1+Population+Population:bs(ChillingTime, knots=c(6), degree=2),
+        data=data, family = "binomial")
+#summary(mod)
+```
+
+Get predictions at all points
+```{r}
+pred.data<-data.frame(Population=as.factor(rep(1:11, each=13)), ChillingTime=rep(0:12, 11))
+pred.data$pred<-predict(mod, newdata = pred.data, type="response")
+pred.data$se<-predict(mod, newdata = pred.data, type="response", se.fit=T)$se.fit
+pred.data$upper<-pred.data$pred+qnorm(.975)*pred.data$se
+pred.data$lower<-pred.data$pred+qnorm(.025)*pred.data$se
+
+```
+
+Plot the fitted points
+```{r}
+pdf(file="FittedLines.pdf")
+ggplot(data)+geom_histogram(aes(x=ChillingTime, fill=Germinated), bins=7)+facet_wrap(~Population)+
+    geom_line(data=pred.data, aes(x=ChillingTime, y=pred*30, colour="Fitted Line"), size=1.1)+ 
+    geom_ribbon(data=pred.data, aes(x=ChillingTime, ymax=upper*30, ymin=lower*30,fill = "95% CI"), alpha = 0.2)+ scale_color_manual(values=c( "#000005"))+scale_fill_manual(values=c(  "#000005", "#F8766D", "#00BFC4"))
+dev.off()
+
+```
+
+Create a model that enforces no difference in the populations
+```{r}
+mod.nopop<-glm(Germinated~bs(ChillingTime, knots=6, degree=2), data= data, family="binomial")
+pred.data$nopoppred<-predict(mod.nopop, newdata=pred.data, type="response")
+pred.data$nopopse<-predict(mod.nopop, newdata=pred.data, type="response",se.fit = T)$se.fit
+pred.data$nopopupper<-pred.data$nopoppred+qnorm(.975)*pred.data$nopopse
+pred.data$nopoplower<-pred.data$nopoppred+qnorm(.025)*pred.data$nopopse
+pdf(file="ForcedNoPop.pdf")
+ggplot(data)+geom_histogram(aes(x=ChillingTime, fill=Germinated), bins=7)+facet_wrap(~Population)+
+    geom_line(data=pred.data, aes(x=ChillingTime, y=nopoppred*30, colour="Fitted Line"))+ scale_color_manual(values=c( "#000005"))+   geom_ribbon(data=pred.data, aes(x=ChillingTime, ymax=nopopupper*30, ymin=nopoplower*30,fill = "95% CI"), alpha = 0.2)+
+  scale_fill_manual(values=c(  "#000005", "#F8766D", "#00BFC4"))
+dev.off()
+```
+Combine species that have similar reactions to chilling time (BIC was reduced by combining them):
+```{r}
+mergeGroups<-function(data){
+newPop<-data$Population
+newPop[newPop %in% c(4,6,7,10)]<-6
+newPop[newPop %in% c(2,3)]<-2
+newPop
+}
+data$newPop<-mergeGroups(data)
+pred.data$newPop<-mergeGroups(pred.data)
+
+newMod<-glm(Germinated~-1+newPop+newPop:bs(ChillingTime, knots=c(6), degree=2),
+    data=data, family = "binomial")
+pred.data$newPreds<-predict(newMod, newdata=pred.data, type="response")
+
+```
+
+Look at our simplified model fit
+```{r}
+pred.data$newse<-predict(newMod, newdata = pred.data, type="response", se.fit=T)$se.fit
+pred.data$newupper<-pred.data$newPreds+qnorm(.975)*pred.data$newse
+pred.data$newlower<-pred.data$newPreds+qnorm(.025)*pred.data$newse
+pdf(file="SimplifiedFit.pdf")
+ggplot(data)+geom_histogram(aes(x=ChillingTime, fill=Germinated), bins=7)+facet_wrap(~Population)+
+    geom_line(data=pred.data, aes(x=ChillingTime, y=newPreds*30, colour="Fitted Line"), size=1.1)+ 
+    geom_ribbon(data=pred.data, aes(x=ChillingTime, ymax=newupper*30, ymin=newlower*30,fill = "95% CI"), alpha = 0.2)+ scale_color_manual(values=c( "#000005"))+scale_fill_manual(values=c(  "#000005", "#F8766D", "#00BFC4"))
+dev.off()
+```
+
+Does the model fit the data? Perform a Hosmer-Lemeshow Goodness of Fit test on out of sample data
+```{r}
+data<-data[with(data, order(Population, ChillingTime)), ]
+testIndices<-(1:(nrow(data)/3))*3 #Splitting the data this way ensures that 10/30 of each group are in the test set
+train<-data[-testIndices,]
+test<-data[testIndices,]
+train$newPop<-mergeGroups(train)
+test$newPop<-mergeGroups(test)
+cvMod<-glm(Germinated~-1+newPop+newPop:bs(ChillingTime, knots=c(6), degree=2),
+    data=train, family = "binomial")
+test$preds<-predict(cvMod, newdata=test, type="response")
+require(ResourceSelection)
+hoslem.test(as.numeric(test$Germinated)-1, test$preds, 10)
+```
+
+
+
+Find the ideal chilling time for each group in our model:
+
+```{r}
+tab<-aggregate(pred.data$newPred~pred.data$Population, FUN=function(x)which.max(x)-1)
+require(xtable)
+xtable(tab)
+```
+
+Set up a matrix to get predictions between 10 and 8 weeks:
+```{r}
+dif.frame<-data.frame(Population=as.factor(rep(1:11, 2)), ChillingTime=rep(c(10,8), each=11))
+dif.frame$newPop<-mergeGroups(dif.frame)
+dif.frame$pred<-predict(newMod, newdata=dif.frame, type="response")
+Shorter.Times<-data.frame(Species=1:11, At8=100*(dif.frame$pred[dif.frame$ChillingTime==8]), 
+                          At10= 100*(dif.frame$pred[dif.frame$ChillingTime==10]), Change =100*(dif.frame$pred[dif.frame$ChillingTime==8]-dif.frame$pred[dif.frame$ChillingTime==10]))
+xtable(Shorter.Times)
+```
+Bootstrap to get a confidence interval on p_8 - p_10
+```{r}
+p8p10<-matrix(0,nrow=1000, ncol=11)
+for (i in 1:nrow(p8p10)){
+  boot.dat<-data[sample(1:2310, 2310, replace=T),]
+  boot.dat$newPop<-mergeGroups(boot.dat)
+  bootMod<-glm(Germinated~-1+newPop+newPop:bs(ChillingTime, knots=c(6), degree=2),
+    data=boot.dat, family = "binomial")
+  preds=predict(bootMod, newdata=dif.frame, type="response")
+  p8p10[i,]<-preds[12:22]-preds[1:11]
+}
+apply(p8p10, 2, mean)
+Shorter.Times$Change.upper=apply(p8p10, 2, quantile, probs=.975)*100
+Shorter.Times$Change.Lower=apply(p8p10, 2, quantile, .025)*100
+```
+
+
+Make a cool graphic to replace the stupid table
+```{r}
+Shorter.Times$Species<-as.factor(Shorter.Times$Species)
+
+pdf(file="Q3.pdf")
+ggplot(Shorter.Times) + geom_col(aes(x=Species, y=Change, fill=Change>0))+geom_errorbar(aes(x=Species, ymin=Change.Lower, ymax=Change.upper))+geom_hline(yintercept=0, lwd=1.2)+ylim(c(-75,25))+ylab("Predicted % Difference (8 - 10 Weeks)") + guides(fill=F)
+dev.off()
+
+```
+
